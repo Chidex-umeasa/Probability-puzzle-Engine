@@ -1,0 +1,16 @@
+{
+  "variables": [
+    { "name": "c1", "domain": ["H", "T"] },
+    { "name": "c2", "domain": ["H", "T"] }
+  ],
+  "constraints": [
+    { "type": "count_eq", "values": ["H"], "vars": ["c1", "c2"], "op": ">=", "k": 1 }
+  ],
+  "query": {
+    "type": "count_eq",
+    "values": ["H"],
+    "vars": ["c1", "c2"],
+    "op": "==",
+    "k": 2
+  }
+}
