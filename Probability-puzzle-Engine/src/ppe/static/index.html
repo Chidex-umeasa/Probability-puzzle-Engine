@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Probability Puzzle Engine</title>
+<style>
+/* ── Reset & Base ─────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root,[data-theme="light"]{
+  --bg-primary:#f8f9fc;--bg-secondary:#ffffff;--bg-card:#ffffff;
+  --bg-input:#f0f1f5;--bg-hover:#e8e9f0;
+  --text-primary:#1a1a2e;--text-secondary:#555770;--text-muted:#8888a0;
+  --border:#dde0e8;--border-focus:#4361ee40;
+  --accent:#4361ee;--accent-hover:#3451d4;--accent-light:#4361ee15;
+  --accent2:#7c3aed;
+  --success:#06d6a0;--success-light:#06d6a020;
+  --warning:#ffd166;--warning-light:#ffd16630;
+  --danger:#ef476f;--danger-light:#ef476f20;
+  --prob-fill:linear-gradient(90deg,#4361ee,#06d6a0);
+  --prob-bg:#e0e2ea;
+  --shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.04);
+  --shadow-lg:0 4px 24px rgba(0,0,0,0.1);
+  --radius:12px;--radius-sm:8px;--radius-xs:6px;
+  --font-sans:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --font-mono:'SF Mono','Cascadia Code','Fira Code',Consolas,monospace;
+  --transition:0.2s ease;
+}
+[data-theme="dark"]{
+  --bg-primary:#0c0d14;--bg-secondary:#151620;--bg-card:#1a1b2e;
+  --bg-input:#1e1f33;--bg-hover:#252640;
+  --text-primary:#e4e5f0;--text-secondary:#a0a2b8;--text-muted:#606278;
+  --border:#2a2c42;--border-focus:#4cc9f040;
+  --accent:#4cc9f0;--accent-hover:#3ab8df;--accent-light:#4cc9f015;
+  --accent2:#a78bfa;
+  --success:#06d6a0;--warning:#ffd166;--danger:#ef476f;
+  --prob-fill:linear-gradient(90deg,#4cc9f0,#06d6a0);
+  --prob-bg:#252640;
+  --shadow:0 1px 3px rgba(0,0,0,0.2),0 4px 12px rgba(0,0,0,0.15);
+  --shadow-lg:0 4px 24px rgba(0,0,0,0.3);
+}
+html{font-size:15px;scroll-behavior:smooth}
+body{font-family:var(--font-sans);background:var(--bg-primary);color:var(--text-primary);
+  transition:background var(--transition),color var(--transition);min-height:100vh}
+a{color:var(--accent);text-decoration:none}
+button{cursor:pointer;font-family:inherit;font-size:inherit}
+input,select,textarea{font-family:inherit;font-size:inherit}
+
+/* ── Typography ───────────────────────────────────────────────── */
+h1{font-size:1.5rem;font-weight:700;letter-spacing:-0.02em}
+h2{font-size:1.1rem;font-weight:600;letter-spacing:-0.01em}
+h3{font-size:0.95rem;font-weight:600}
+.text-muted{color:var(--text-muted)}
+.text-sm{font-size:0.82rem}
+.text-xs{font-size:0.75rem}
+.mono{font-family:var(--font-mono)}
+
+/* ── Layout ───────────────────────────────────────────────────── */
+#app-header{display:flex;align-items:center;justify-content:space-between;
+  padding:0.75rem 1.5rem;background:var(--bg-secondary);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+#app-header .logo{display:flex;align-items:center;gap:0.6rem}
+#app-header .logo span.icon{font-size:1.4rem}
+#app-header .actions{display:flex;gap:0.4rem;position:relative}
+#app-main{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;
+  max-width:1440px;margin:0 auto;padding:1.25rem}
+@media(max-width:900px){#app-main{grid-template-columns:1fr}}
+
+/* ── Cards ────────────────────────────────────────────────────── */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1.25rem;box-shadow:var(--shadow);transition:border-color var(--transition)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem}
+.card+.card{margin-top:1rem}
+
+/* ── Buttons ──────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:0.4rem;padding:0.5rem 1rem;
+  border-radius:var(--radius-sm);font-weight:500;font-size:0.88rem;
+  border:1px solid transparent;transition:all var(--transition)}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-secondary{background:transparent;color:var(--accent);border-color:var(--border)}
+.btn-secondary:hover{background:var(--accent-light)}
+.btn-danger{background:transparent;color:var(--danger);border-color:transparent;padding:0.3rem 0.5rem}
+.btn-danger:hover{background:var(--danger-light)}
+.btn-sm{padding:0.3rem 0.6rem;font-size:0.8rem}
+.btn-icon{padding:0.45rem;border-radius:var(--radius-xs);background:transparent;
+  border:1px solid var(--border);color:var(--text-secondary);font-size:1.1rem;line-height:1}
+.btn-icon:hover{background:var(--bg-hover);color:var(--text-primary)}
+.btn:disabled{opacity:0.5;cursor:not-allowed}
+.btn-group{display:flex;gap:0.4rem;flex-wrap:wrap}
+
+/* ── Inputs ───────────────────────────────────────────────────── */
+.input,.select{padding:0.45rem 0.7rem;border:1px solid var(--border);border-radius:var(--radius-xs);
+  background:var(--bg-input);color:var(--text-primary);transition:all var(--transition);width:100%}
+.input:focus,.select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--border-focus)}
+.input-sm{padding:0.3rem 0.5rem;font-size:0.82rem}
+.field{display:flex;flex-direction:column;gap:0.25rem}
+.field label{font-size:0.78rem;font-weight:500;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em}
+.field-row{display:flex;gap:0.5rem;align-items:flex-end}
+.field-inline{display:flex;align-items:center;gap:0.5rem}
+
+/* ── Tabs ─────────────────────────────────────────────────────── */
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1rem}
+.tab{padding:0.5rem 1rem;font-weight:500;font-size:0.88rem;color:var(--text-muted);
+  border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;transition:all var(--transition);
+  background:none;border-top:none;border-left:none;border-right:none}
+.tab:hover{color:var(--text-primary)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-content{display:none}.tab-content.active{display:block}
+
+/* ── Badges ───────────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;padding:0.15rem 0.5rem;border-radius:99px;
+  font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em}
+.badge-accent{background:var(--accent-light);color:var(--accent)}
+.badge-success{background:var(--success-light);color:var(--success)}
+.badge-warning{background:var(--warning-light);color:var(--warning)}
+
+/* ── Probability Display ──────────────────────────────────────── */
+.prob-hero{text-align:center;padding:1.5rem 0}
+.prob-pct{font-size:3rem;font-weight:800;letter-spacing:-0.03em;
+  background:var(--prob-fill);-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text}
+.prob-frac{font-size:1.3rem;font-weight:600;color:var(--text-secondary);margin-top:0.2rem;font-family:var(--font-mono)}
+.prob-dec{font-size:0.9rem;color:var(--text-muted);margin-top:0.1rem;font-family:var(--font-mono)}
+.prob-bar-wrap{width:100%;height:22px;background:var(--prob-bg);border-radius:99px;overflow:hidden;margin-top:0.75rem}
+.prob-bar-fill{height:100%;border-radius:99px;background:var(--prob-fill);
+  transition:width 0.8s cubic-bezier(0.22,1,0.36,1);width:0%}
+
+/* ── CI Bar ───────────────────────────────────────────────────── */
+.ci-bar-wrap{position:relative;width:100%;height:18px;background:var(--prob-bg);border-radius:99px;margin-top:0.5rem}
+.ci-bar-range{position:absolute;height:100%;background:var(--accent-light);border-radius:99px;border:2px solid var(--accent)}
+.ci-bar-point{position:absolute;width:4px;height:100%;background:var(--accent);border-radius:2px;transform:translateX(-50%)}
+
+/* ── State Counts ─────────────────────────────────────────────── */
+.counts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-top:0.5rem}
+.count-item{text-align:center;padding:0.6rem;background:var(--bg-input);border-radius:var(--radius-sm)}
+.count-val{font-size:1.4rem;font-weight:700;color:var(--text-primary)}
+.count-label{font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;margin-top:0.15rem}
+
+/* ── State Table ──────────────────────────────────────────────── */
+.state-table-wrap{max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:0.5rem}
+.state-table{width:100%;border-collapse:collapse;font-size:0.82rem;font-family:var(--font-mono)}
+.state-table th{position:sticky;top:0;background:var(--bg-input);padding:0.4rem 0.7rem;
+  text-align:left;font-weight:600;border-bottom:2px solid var(--border)}
+.state-table td{padding:0.35rem 0.7rem;border-bottom:1px solid var(--border)}
+.state-table tr.hit{background:var(--success-light)}
+
+/* ── Explanation ──────────────────────────────────────────────── */
+.explanation-pre{font-family:var(--font-mono);font-size:0.82rem;line-height:1.6;
+  padding:1rem;background:var(--bg-input);border-radius:var(--radius-sm);
+  white-space:pre-wrap;word-break:break-word;border:1px solid var(--border)}
+.hl-section{font-weight:700;color:var(--accent)}
+.hl-num{color:var(--accent2)}
+.hl-op{color:var(--danger);font-weight:600}
+.hl-result{font-weight:700;color:var(--success)}
+
+/* ── Compare ──────────────────────────────────────────────────── */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:600px){.compare-grid{grid-template-columns:1fr}}
+.compare-card{padding:1rem;border:1px solid var(--border);border-radius:var(--radius-sm)}
+.compare-card h3{margin-bottom:0.5rem}
+
+/* ── Variable / Constraint Items ──────────────────────────────── */
+.item-card{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:0.75rem;margin-bottom:0.5rem;position:relative;transition:border-color var(--transition)}
+.item-card:hover{border-color:var(--accent)}
+.item-card .remove-btn{position:absolute;top:0.4rem;right:0.4rem}
+.item-card .item-row{display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap}
+.item-card .item-row .field{flex:1;min-width:80px}
+.weights-row{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.4rem;align-items:center}
+.weights-row .field{flex:0 0 60px}
+.weights-row label{font-size:0.72rem}
+
+/* ── Presets ───────────────────────────────────────────────────── */
+.presets{display:flex;gap:0.3rem;flex-wrap:wrap;margin-bottom:0.5rem}
+.preset-btn{padding:0.2rem 0.5rem;font-size:0.75rem;border-radius:99px;
+  background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);
+  cursor:pointer;font-weight:500;transition:all var(--transition)}
+.preset-btn:hover{background:var(--accent);color:#fff}
+
+/* ── Quick Generate ───────────────────────────────────────────── */
+.gen-row{display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap}
+.gen-row .field{flex:0 0 auto}
+.gen-row .field input{width:60px}
+
+/* ── History Drawer ───────────────────────────────────────────── */
+#history-drawer{position:fixed;right:0;top:0;width:340px;height:100vh;
+  background:var(--bg-secondary);border-left:1px solid var(--border);
+  box-shadow:var(--shadow-lg);z-index:200;
+  transform:translateX(100%);transition:transform 0.3s ease;
+  display:flex;flex-direction:column;overflow:hidden}
+#history-drawer.open{transform:translateX(0)}
+#history-drawer .drawer-header{display:flex;align-items:center;justify-content:space-between;
+  padding:1rem;border-bottom:1px solid var(--border)}
+#history-drawer .drawer-body{flex:1;overflow-y:auto;padding:0.75rem}
+.history-item{padding:0.6rem;border:1px solid var(--border);border-radius:var(--radius-sm);
+  margin-bottom:0.5rem;cursor:pointer;transition:all var(--transition)}
+.history-item:hover{border-color:var(--accent);background:var(--accent-light)}
+.history-item .hi-prob{font-size:1.1rem;font-weight:700;color:var(--accent)}
+.history-item .hi-desc{font-size:0.78rem;color:var(--text-secondary);margin-top:0.15rem}
+.history-item .hi-time{font-size:0.7rem;color:var(--text-muted);margin-top:0.1rem}
+#history-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:199}
+#history-overlay.open{display:block}
+
+/* ── JSON Modal ───────────────────────────────────────────────── */
+#json-modal{display:none;position:fixed;inset:0;z-index:300;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.4);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+#json-modal.open{display:flex}
+#json-modal .modal-content{background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:1.5rem;width:90vw;max-width:700px;max-height:85vh;
+  display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
+#json-modal textarea{flex:1;min-height:350px;font-family:var(--font-mono);font-size:0.85rem;
+  padding:1rem;border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--bg-input);color:var(--text-primary);resize:vertical;line-height:1.5}
+#json-modal textarea:focus{outline:none;border-color:var(--accent)}
+#json-modal .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem}
+#json-modal .modal-footer{display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.75rem}
+.json-error{color:var(--danger);font-size:0.82rem;margin-top:0.4rem;min-height:1.2rem}
+
+/* ── Toasts ───────────────────────────────────────────────────── */
+#toast-container{position:fixed;bottom:1.25rem;right:1.25rem;z-index:400;display:flex;flex-direction:column-reverse;gap:0.5rem}
+.toast{padding:0.65rem 1rem;border-radius:var(--radius-sm);font-size:0.85rem;font-weight:500;
+  box-shadow:var(--shadow-lg);animation:toastIn 0.3s ease;min-width:200px;max-width:380px}
+.toast-info{background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary)}
+.toast-success{background:#065f46;color:#d1fae5;border:1px solid #06d6a0}
+.toast-error{background:#7f1d1d;color:#fecaca;border:1px solid #ef476f}
+.toast.removing{animation:toastOut 0.3s ease forwards}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(10px)}}
+
+/* ── Loading Spinner ──────────────────────────────────────────── */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid transparent;
+  border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite}
+.spinner-accent{border-top-color:var(--accent)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Animations ───────────────────────────────────────────────── */
+@keyframes fadeInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.anim-in{animation:fadeInUp 0.4s ease}
+
+/* ── Collapsible ──────────────────────────────────────────────── */
+.collapsible-header{cursor:pointer;display:flex;align-items:center;gap:0.4rem;
+  font-weight:600;font-size:0.9rem;color:var(--text-secondary);-webkit-user-select:none;user-select:none}
+.collapsible-header::before{content:"";display:inline-block;width:0;height:0;
+  border-left:5px solid var(--text-muted);border-top:4px solid transparent;border-bottom:4px solid transparent;
+  transition:transform 0.2s ease}
+.collapsible-header.expanded::before{transform:rotate(90deg)}
+.collapsible-body{display:none;margin-top:0.5rem}
+.collapsible-body.expanded{display:block}
+
+/* ── Placeholder ──────────────────────────────────────────────── */
+.placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:3rem;color:var(--text-muted);text-align:center;min-height:300px}
+.placeholder .placeholder-icon{font-size:3rem;margin-bottom:0.75rem;opacity:0.4}
+.placeholder p{font-size:0.95rem}
+
+/* ── Scrollbar ────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
+/* ── Shortcuts Help ───────────────────────────────────────────── */
+.shortcuts-tip{position:absolute;right:0;top:calc(100% + 8px);background:var(--bg-card);
+  border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 1rem;
+  box-shadow:var(--shadow-lg);font-size:0.8rem;white-space:nowrap;z-index:50;display:none}
+.shortcuts-tip.show{display:block}
+.shortcuts-tip table td{padding:0.15rem 0.5rem}
+.shortcuts-tip kbd{background:var(--bg-input);border:1px solid var(--border);border-radius:3px;
+  padding:0.1rem 0.35rem;font-family:var(--font-mono);font-size:0.75rem}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<header id="app-header">
+  <div class="logo">
+    <span class="icon">&#x1F3B2;</span>
+    <h1>Probability Puzzle Engine</h1>
+  </div>
+  <div class="actions">
+    <button class="btn-icon" id="btn-shortcuts" title="Keyboard shortcuts">?</button>
+    <div class="shortcuts-tip" id="shortcuts-tip">
+      <table>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td>Run solver</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>J</kbd></td><td>JSON editor</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd></td><td>History</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Close modal</td></tr>
+      </table>
+    </div>
+    <button class="btn-icon" id="btn-history" title="History">&#x1F553;</button>
+    <button class="btn-icon" id="btn-theme" title="Toggle theme">&#x263E;</button>
+  </div>
+</header>
+
+<!-- ═══════════════════ MAIN ═══════════════════ -->
+<main id="app-main">
+
+<!-- ─── LEFT COLUMN: BUILDER ─── -->
+<div id="builder-col">
+
+  <!-- Quick Actions -->
+  <div class="card">
+    <div class="card-header"><h2>Quick Actions</h2></div>
+
+    <!-- Library -->
+    <div class="field" style="margin-bottom:0.75rem">
+      <label>Puzzle Library</label>
+      <select class="select" id="library-select">
+        <option value="">-- Select a classic puzzle --</option>
+      </select>
+    </div>
+
+    <!-- Generators -->
+    <div style="display:flex;gap:1rem;flex-wrap:wrap">
+      <div>
+        <div class="gen-row">
+          <div class="field"><label>Coins</label><input type="number" class="input input-sm" id="gen-coin-n" value="3" min="1" max="20"></div>
+          <button class="btn btn-secondary btn-sm" id="btn-gen-coin">Random Coin</button>
+        </div>
+      </div>
+      <div>
+        <div class="gen-row">
+          <div class="field"><label>Dice</label><input type="number" class="input input-sm" id="gen-dice-n" value="2" min="1" max="10"></div>
+          <div class="field"><label>Sides</label><input type="number" class="input input-sm" id="gen-dice-sides" value="6" min="2" max="20"></div>
+          <button class="btn btn-secondary btn-sm" id="btn-gen-dice">Random Dice</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variables -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Variables</h2>
+      <div class="btn-group">
+        <button class="preset-btn" id="preset-coin" title="Add coin variable">+ Coin</button>
+        <button class="preset-btn" id="preset-die" title="Add die variable">+ Die</button>
+        <button class="btn btn-secondary btn-sm" id="btn-add-var">+ Custom</button>
+      </div>
+    </div>
+    <div id="variables-container"></div>
+  </div>
+
+  <!-- Constraints -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Constraints (Given)</h2>
+      <button class="btn btn-secondary btn-sm" id="btn-add-constraint">+ Add</button>
+    </div>
+    <div id="constraints-container">
+      <p class="text-muted text-sm" id="no-constraints-msg">No constraints (unconditional probability)</p>
+    </div>
+  </div>
+
+  <!-- Query -->
+  <div class="card">
+    <div class="card-header"><h2>Query</h2></div>
+    <div id="query-container"></div>
+  </div>
+
+  <!-- Builder Actions -->
+  <div style="display:flex;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap">
+    <button class="btn btn-secondary btn-sm" id="btn-json-editor">{ } JSON Editor</button>
+    <button class="btn btn-secondary btn-sm" id="btn-copy-puzzle">Copy Puzzle</button>
+    <button class="btn btn-secondary btn-sm" id="btn-share-url">Share URL</button>
+    <button class="btn btn-danger btn-sm" id="btn-clear" style="margin-left:auto">Clear All</button>
+  </div>
+
+  <!-- Solver -->
+  <div class="card" style="margin-top:1rem">
+    <div class="tabs">
+      <button class="tab active" data-tab="exact">Exact</button>
+      <button class="tab" data-tab="mc">Monte Carlo</button>
+      <button class="tab" data-tab="compare">Compare</button>
+    </div>
+
+    <div class="tab-content active" id="tab-exact">
+      <div class="field-inline" style="margin-bottom:0.5rem">
+        <label><input type="checkbox" id="exact-trace"> Include trace states</label>
+      </div>
+      <div class="field-inline" id="trace-max-row" style="margin-bottom:0.5rem;display:none">
+        <label>Max trace:</label>
+        <input type="number" class="input input-sm" id="exact-max-trace" value="50" min="1" max="500" style="width:70px">
+      </div>
+      <div class="field-inline" style="margin-bottom:0.75rem">
+        <label><input type="checkbox" id="exact-explain" checked> Show explanation</label>
+      </div>
+      <button class="btn btn-primary" id="btn-solve-exact" style="width:100%">Solve Exact</button>
+    </div>
+
+    <div class="tab-content" id="tab-mc">
+      <div class="field-row" style="margin-bottom:0.5rem">
+        <div class="field"><label>Samples</label><input type="number" class="input input-sm" id="mc-samples" value="10000" min="100" max="1000000"></div>
+        <div class="field"><label>Confidence</label><input type="number" class="input input-sm" id="mc-confidence" value="0.95" min="0.5" max="0.999" step="0.01"></div>
+        <div class="field"><label>Seed</label><input type="number" class="input input-sm" id="mc-seed" placeholder="auto"></div>
+      </div>
+      <button class="btn btn-primary" id="btn-solve-mc" style="width:100%">Run Monte Carlo</button>
+    </div>
+
+    <div class="tab-content" id="tab-compare">
+      <p class="text-sm text-muted" style="margin-bottom:0.5rem">Runs both Exact and Monte Carlo solvers in parallel.</p>
+      <div class="field-row" style="margin-bottom:0.5rem">
+        <div class="field"><label>MC Samples</label><input type="number" class="input input-sm" id="cmp-samples" value="10000" min="100" max="1000000"></div>
+        <div class="field"><label>Confidence</label><input type="number" class="input input-sm" id="cmp-confidence" value="0.95" min="0.5" max="0.999" step="0.01"></div>
+      </div>
+      <button class="btn btn-primary" id="btn-solve-compare" style="width:100%">Run Both</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── RIGHT COLUMN: RESULTS ─── -->
+<div id="results-col">
+  <div id="results-placeholder" class="card placeholder">
+    <div class="placeholder-icon">&#x1F4CA;</div>
+    <p>Build a puzzle and run a solver to see results</p>
+    <p class="text-sm text-muted" style="margin-top:0.5rem">Or select one from the Puzzle Library to get started</p>
+  </div>
+  <div id="results-content" style="display:none"></div>
+</div>
+
+</main>
+
+<!-- ═══════════════════ HISTORY DRAWER ═══════════════════ -->
+<div id="history-overlay"></div>
+<aside id="history-drawer">
+  <div class="drawer-header">
+    <h2>History</h2>
+    <div style="display:flex;gap:0.3rem">
+      <button class="btn btn-danger btn-sm" id="btn-clear-history">Clear</button>
+      <button class="btn-icon" id="btn-close-history">&times;</button>
+    </div>
+  </div>
+  <div class="drawer-body" id="history-list"></div>
+</aside>
+
+<!-- ═══════════════════ JSON MODAL ═══════════════════ -->
+<div id="json-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Puzzle JSON</h2>
+      <button class="btn-icon" id="btn-close-json">&times;</button>
+    </div>
+    <textarea id="json-textarea" spellcheck="false"></textarea>
+    <div class="json-error" id="json-error"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="btn-json-cancel">Cancel</button>
+      <button class="btn btn-primary" id="btn-json-apply">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TOASTS ═══════════════════ -->
+<div id="toast-container"></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   PROBABILITY PUZZLE ENGINE — Interactive Web UI
+   ════════════════════════════════════════════════════════════════ */
+
+// ── Toast ────────────────────────────────────────────────────────
+const Toast = {
+  show(msg, type = 'info', duration = 3000) {
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.textContent = msg;
+    document.getElementById('toast-container').appendChild(el);
+    setTimeout(() => {
+      el.classList.add('removing');
+      setTimeout(() => el.remove(), 300);
+    }, duration);
+  }
+};
+
+// ── Theme ────────────────────────────────────────────────────────
+const Theme = {
+  init() {
+    const saved = localStorage.getItem('ppe-theme');
+    if (saved) document.documentElement.dataset.theme = saved;
+    this.updateIcon();
+    document.getElementById('btn-theme').addEventListener('click', () => this.toggle());
+  },
+  toggle() {
+    const html = document.documentElement;
+    html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('ppe-theme', html.dataset.theme);
+    this.updateIcon();
+  },
+  updateIcon() {
+    const btn = document.getElementById('btn-theme');
+    btn.textContent = document.documentElement.dataset.theme === 'dark' ? '\u2600' : '\u263E';
+  }
+};
+
+// ── API ──────────────────────────────────────────────────────────
+const API = {
+  async _fetch(url, options = {}) {
+    const resp = await fetch(url, options);
+    if (!resp.ok) {
+      let msg = `Error ${resp.status}`;
+      try { const d = await resp.json(); msg = d.detail ? JSON.stringify(d.detail) : msg; } catch {}
+      throw new Error(msg);
+    }
+    return resp.json();
+  },
+  generateCoin(n, seed) {
+    const p = new URLSearchParams({ n_coins: n });
+    if (seed) p.set('seed', seed);
+    return this._fetch(`/generate/coin?${p}`);
+  },
+  generateDice(n, sides, seed) {
+    const p = new URLSearchParams({ n_dice: n, n_sides: sides });
+    if (seed) p.set('seed', seed);
+    return this._fetch(`/generate/dice?${p}`);
+  },
+  solveExact(puzzle, trace = false, maxTrace = 50) {
+    const p = new URLSearchParams({ trace, max_trace: maxTrace });
+    return this._fetch(`/solve/exact?${p}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(puzzle)
+    });
+  },
+  solveMC(puzzle, nSamples, confidence, seed) {
+    const p = new URLSearchParams({ n_samples: nSamples, confidence });
+    if (seed) p.set('seed', seed);
+    return this._fetch(`/solve/monte_carlo?${p}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(puzzle)
+    });
+  },
+  solveExplain(puzzle) {
+    return this._fetch('/solve/explain', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(puzzle)
+    });
+  }
+};
+
+// ── Library ──────────────────────────────────────────────────────
+const LIBRARY = [
+  {
+    name: "Two Coins \u2014 P(both H | \u22651 H)",
+    desc: "Classic: P = 1/3",
+    spec: {
+      variables: [{ name: "c1", domain: ["H", "T"] }, { name: "c2", domain: ["H", "T"] }],
+      constraints: [{ type: "count_eq", values: ["H"], vars: ["c1", "c2"], op: ">=", k: 1 }],
+      query: { type: "count_eq", values: ["H"], vars: ["c1", "c2"], op: "==", k: 2 }
+    }
+  },
+  {
+    name: "Three Coins \u2014 All Heads",
+    desc: "P(3H) = 1/8",
+    spec: {
+      variables: [{ name: "c1", domain: ["H","T"] },{ name: "c2", domain: ["H","T"] },{ name: "c3", domain: ["H","T"] }],
+      constraints: [],
+      query: { type: "count_eq", values: ["H"], vars: ["c1","c2","c3"], op: "==", k: 3 }
+    }
+  },
+  {
+    name: "Three Coins \u2014 Exactly 2H | \u22651H",
+    desc: "P = 3/7",
+    spec: {
+      variables: [{ name: "c1", domain: ["H","T"] },{ name: "c2", domain: ["H","T"] },{ name: "c3", domain: ["H","T"] }],
+      constraints: [{ type: "count_eq", values: ["H"], vars: ["c1","c2","c3"], op: ">=", k: 1 }],
+      query: { type: "count_eq", values: ["H"], vars: ["c1","c2","c3"], op: "==", k: 2 }
+    }
+  },
+  {
+    name: "Two Dice \u2014 Sum = 7",
+    desc: "P = 6/36 = 1/6",
+    spec: {
+      variables: [{ name: "d1", domain: ["1","2","3","4","5","6"] },{ name: "d2", domain: ["1","2","3","4","5","6"] }],
+      constraints: [],
+      query: { type: "sum_eq", vars: ["d1","d2"], op: "==", k: 7 }
+    }
+  },
+  {
+    name: "Double Sixes",
+    desc: "P = 1/36",
+    spec: {
+      variables: [{ name: "d1", domain: ["1","2","3","4","5","6"] },{ name: "d2", domain: ["1","2","3","4","5","6"] }],
+      constraints: [],
+      query: { type: "count_eq", values: ["6"], vars: ["d1","d2"], op: "==", k: 2 }
+    }
+  },
+  {
+    name: "Dice \u2014 Sum=7 | At Least One 6",
+    desc: "P = 2/11",
+    spec: {
+      variables: [{ name: "d1", domain: ["1","2","3","4","5","6"] },{ name: "d2", domain: ["1","2","3","4","5","6"] }],
+      constraints: [{ type: "count_eq", values: ["6"], vars: ["d1","d2"], op: ">=", k: 1 }],
+      query: { type: "sum_eq", vars: ["d1","d2"], op: "==", k: 7 }
+    }
+  },
+  {
+    name: "Loaded Coin (70/30)",
+    desc: "P(H) = 0.7 weighted",
+    spec: {
+      variables: [{ name: "coin", domain: ["H","T"], weights: [0.7, 0.3] }],
+      constraints: [],
+      query: { type: "value_eq", var: "coin", value: "H" }
+    }
+  },
+  {
+    name: "Two Biased Coins \u2014 Both H | \u22651H",
+    desc: "P(H)=0.75, answer=0.6",
+    spec: {
+      variables: [
+        { name: "c1", domain: ["H","T"], weights: [3, 1] },
+        { name: "c2", domain: ["H","T"], weights: [3, 1] }
+      ],
+      constraints: [{ type: "count_eq", values: ["H"], vars: ["c1","c2"], op: ">=", k: 1 }],
+      query: { type: "count_eq", values: ["H"], vars: ["c1","c2"], op: "==", k: 2 }
+    }
+  }
+];
+
+// ── Utility ──────────────────────────────────────────────────────
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+function toFraction(hit, given) {
+  if (given === 0) return 'undefined';
+  if (hit === 0) return '0';
+  const g = gcd(hit, given);
+  const n = hit / g, d = given / g;
+  return d === 1 ? `${n}` : `${n}/${d}`;
+}
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+let varCounter = 0;
+
+function getVarNames() {
+  const names = [];
+  document.querySelectorAll('#variables-container .var-name-input').forEach(el => {
+    if (el.value.trim()) names.push(el.value.trim());
+  });
+  return names;
+}
+
+// ── Builder ──────────────────────────────────────────────────────
+const Builder = {
+  init() {
+    document.getElementById('btn-add-var').addEventListener('click', () => this.addVariable('', [''], null));
+    document.getElementById('preset-coin').addEventListener('click', () => {
+      varCounter++;
+      this.addVariable(`c${varCounter}`, ['H', 'T'], null);
+    });
+    document.getElementById('preset-die').addEventListener('click', () => {
+      varCounter++;
+      this.addVariable(`d${varCounter}`, ['1','2','3','4','5','6'], null);
+    });
+    document.getElementById('btn-add-constraint').addEventListener('click', () => this.addConstraint('count_eq', null));
+    document.getElementById('btn-clear').addEventListener('click', () => this.clear());
+
+    // Init with one coin variable and default query
+    this.clear();
+  },
+
+  addVariable(name, domain, weights) {
+    const container = document.getElementById('variables-container');
+    const div = document.createElement('div');
+    div.className = 'item-card';
+    const hasWeights = weights !== null && weights !== undefined;
+    div.innerHTML = `
+      <button class="btn btn-danger remove-btn" title="Remove">&times;</button>
+      <div class="item-row">
+        <div class="field" style="flex:0 0 80px"><label>Name</label>
+          <input type="text" class="input input-sm var-name-input" value="${escapeHtml(name)}" placeholder="name">
+        </div>
+        <div class="field" style="flex:1"><label>Domain (comma-separated)</label>
+          <input type="text" class="input input-sm var-domain-input" value="${escapeHtml(domain.join(','))}" placeholder="H,T">
+        </div>
+        <div class="field" style="flex:0 0 auto">
+          <label>&nbsp;</label>
+          <label style="font-size:0.8rem;cursor:pointer;text-transform:none;letter-spacing:0">
+            <input type="checkbox" class="var-weighted-check" ${hasWeights ? 'checked' : ''}> Weighted
+          </label>
+        </div>
+      </div>
+      <div class="weights-row" style="${hasWeights ? '' : 'display:none'}"></div>
+    `;
+    container.appendChild(div);
+
+    const removeBtn = div.querySelector('.remove-btn');
+    removeBtn.addEventListener('click', () => { div.remove(); });
+
+    const domainInput = div.querySelector('.var-domain-input');
+    const weightCheck = div.querySelector('.var-weighted-check');
+    const weightsRow = div.querySelector('.weights-row');
+
+    const updateWeightsUI = () => {
+      if (!weightCheck.checked) { weightsRow.style.display = 'none'; weightsRow.innerHTML = ''; return; }
+      weightsRow.style.display = 'flex';
+      const vals = domainInput.value.split(',').map(s => s.trim()).filter(Boolean);
+      const currentWeights = Array.from(weightsRow.querySelectorAll('input')).map(i => parseFloat(i.value) || 1);
+      weightsRow.innerHTML = vals.map((v, i) =>
+        `<div class="field"><label>${escapeHtml(v)}</label><input type="number" class="input input-sm weight-input" value="${currentWeights[i] !== undefined ? currentWeights[i] : 1}" min="0" step="0.1" style="width:55px"></div>`
+      ).join('');
+    };
+
+    domainInput.addEventListener('input', updateWeightsUI);
+    weightCheck.addEventListener('change', updateWeightsUI);
+    if (hasWeights) {
+      // set weights after rendering
+      setTimeout(() => {
+        updateWeightsUI();
+        const inputs = weightsRow.querySelectorAll('.weight-input');
+        weights.forEach((w, i) => { if (inputs[i]) inputs[i].value = w; });
+      }, 0);
+    }
+  },
+
+  addConstraint(type, data) {
+    const container = document.getElementById('constraints-container');
+    document.getElementById('no-constraints-msg').style.display = 'none';
+    const div = document.createElement('div');
+    div.className = 'item-card constraint-item';
+    div.innerHTML = this._constraintInnerHTML(type, data);
+    container.appendChild(div);
+
+    div.querySelector('.remove-btn').addEventListener('click', () => {
+      div.remove();
+      if (!container.querySelector('.constraint-item'))
+        document.getElementById('no-constraints-msg').style.display = '';
+    });
+    div.querySelector('.constraint-type-select').addEventListener('change', (e) => {
+      const newType = e.target.value;
+      div.innerHTML = this._constraintInnerHTML(newType, null);
+      div.querySelector('.remove-btn').addEventListener('click', () => {
+        div.remove();
+        if (!container.querySelector('.constraint-item'))
+          document.getElementById('no-constraints-msg').style.display = '';
+      });
+      div.querySelector('.constraint-type-select').addEventListener('change', arguments.callee);
+    });
+  },
+
+  _constraintInnerHTML(type, data) {
+    let fields = '';
+    if (type === 'count_eq') {
+      fields = `
+        <div class="field"><label>Values</label><input type="text" class="input input-sm c-values" value="${data ? data.values.join(',') : 'H'}" placeholder="H"></div>
+        <div class="field"><label>Vars</label><input type="text" class="input input-sm c-vars" value="${data ? data.vars.join(',') : getVarNames().join(',')}" placeholder="c1,c2"></div>
+        <div class="field" style="flex:0 0 65px"><label>Op</label>
+          <select class="select input-sm c-op">${['==','>=','<=','>','<'].map(o => `<option ${data && data.op === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+        </div>
+        <div class="field" style="flex:0 0 55px"><label>k</label><input type="number" class="input input-sm c-k" value="${data ? data.k : 1}" min="0"></div>`;
+    } else if (type === 'value_eq') {
+      fields = `
+        <div class="field"><label>Var</label><input type="text" class="input input-sm c-var" value="${data ? data.var : (getVarNames()[0]||'')}" placeholder="c1"></div>
+        <div class="field"><label>Value</label><input type="text" class="input input-sm c-value" value="${data ? data.value : 'H'}" placeholder="H"></div>`;
+    } else if (type === 'sum_eq') {
+      fields = `
+        <div class="field"><label>Vars</label><input type="text" class="input input-sm c-vars" value="${data ? data.vars.join(',') : getVarNames().join(',')}" placeholder="d1,d2"></div>
+        <div class="field" style="flex:0 0 65px"><label>Op</label>
+          <select class="select input-sm c-op">${['==','>=','<=','>','<'].map(o => `<option ${data && data.op === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+        </div>
+        <div class="field" style="flex:0 0 55px"><label>k</label><input type="number" class="input input-sm c-k" value="${data ? data.k : 7}" min="0"></div>`;
+    }
+    return `
+      <button class="btn btn-danger remove-btn" title="Remove">&times;</button>
+      <div class="item-row">
+        <div class="field" style="flex:0 0 110px"><label>Type</label>
+          <select class="select input-sm constraint-type-select">
+            <option value="count_eq" ${type==='count_eq'?'selected':''}>Count</option>
+            <option value="value_eq" ${type==='value_eq'?'selected':''}>Value</option>
+            <option value="sum_eq" ${type==='sum_eq'?'selected':''}>Sum</option>
+          </select>
+        </div>
+        ${fields}
+      </div>`;
+  },
+
+  setQuery(type, data) {
+    const container = document.getElementById('query-container');
+    container.innerHTML = '';
+    const div = document.createElement('div');
+    div.className = 'item-card';
+    div.style.border = '2px solid var(--accent)';
+    div.innerHTML = this._queryInnerHTML(type, data);
+    container.appendChild(div);
+    div.querySelector('.constraint-type-select').addEventListener('change', (e) => {
+      div.innerHTML = this._queryInnerHTML(e.target.value, null);
+      div.querySelector('.constraint-type-select').addEventListener('change', arguments.callee);
+    });
+  },
+
+  _queryInnerHTML(type, data) {
+    // Same as constraint but no remove button
+    let fields = '';
+    if (type === 'count_eq') {
+      fields = `
+        <div class="field"><label>Values</label><input type="text" class="input input-sm c-values" value="${data ? data.values.join(',') : 'H'}" placeholder="H"></div>
+        <div class="field"><label>Vars</label><input type="text" class="input input-sm c-vars" value="${data ? data.vars.join(',') : getVarNames().join(',')}" placeholder="c1,c2"></div>
+        <div class="field" style="flex:0 0 65px"><label>Op</label>
+          <select class="select input-sm c-op">${['==','>=','<=','>','<'].map(o => `<option ${data && data.op === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+        </div>
+        <div class="field" style="flex:0 0 55px"><label>k</label><input type="number" class="input input-sm c-k" value="${data ? data.k : 2}" min="0"></div>`;
+    } else if (type === 'value_eq') {
+      fields = `
+        <div class="field"><label>Var</label><input type="text" class="input input-sm c-var" value="${data ? data.var : (getVarNames()[0]||'')}" placeholder="c1"></div>
+        <div class="field"><label>Value</label><input type="text" class="input input-sm c-value" value="${data ? data.value : 'H'}" placeholder="H"></div>`;
+    } else if (type === 'sum_eq') {
+      fields = `
+        <div class="field"><label>Vars</label><input type="text" class="input input-sm c-vars" value="${data ? data.vars.join(',') : getVarNames().join(',')}" placeholder="d1,d2"></div>
+        <div class="field" style="flex:0 0 65px"><label>Op</label>
+          <select class="select input-sm c-op">${['==','>=','<=','>','<'].map(o => `<option ${data && data.op === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+        </div>
+        <div class="field" style="flex:0 0 55px"><label>k</label><input type="number" class="input input-sm c-k" value="${data ? data.k : 7}" min="0"></div>`;
+    }
+    return `
+      <div class="item-row">
+        <div class="field" style="flex:0 0 110px"><label>Type</label>
+          <select class="select input-sm constraint-type-select">
+            <option value="count_eq" ${type==='count_eq'?'selected':''}>Count</option>
+            <option value="value_eq" ${type==='value_eq'?'selected':''}>Value</option>
+            <option value="sum_eq" ${type==='sum_eq'?'selected':''}>Sum</option>
+          </select>
+        </div>
+        ${fields}
+      </div>`;
+  },
+
+  _readConstraintFromCard(card) {
+    const type = card.querySelector('.constraint-type-select').value;
+    if (type === 'count_eq') {
+      return {
+        type: 'count_eq',
+        values: card.querySelector('.c-values').value.split(',').map(s => s.trim()).filter(Boolean),
+        vars: card.querySelector('.c-vars').value.split(',').map(s => s.trim()).filter(Boolean),
+        op: card.querySelector('.c-op').value,
+        k: parseInt(card.querySelector('.c-k').value) || 0
+      };
+    } else if (type === 'value_eq') {
+      return { type: 'value_eq', var: card.querySelector('.c-var').value.trim(), value: card.querySelector('.c-value').value.trim() };
+    } else {
+      return {
+        type: 'sum_eq',
+        vars: card.querySelector('.c-vars').value.split(',').map(s => s.trim()).filter(Boolean),
+        op: card.querySelector('.c-op').value,
+        k: parseInt(card.querySelector('.c-k').value) || 0
+      };
+    }
+  },
+
+  toPuzzleSpec() {
+    const variables = [];
+    document.querySelectorAll('#variables-container .item-card').forEach(card => {
+      const name = card.querySelector('.var-name-input').value.trim();
+      const domain = card.querySelector('.var-domain-input').value.split(',').map(s => s.trim()).filter(Boolean);
+      const weighted = card.querySelector('.var-weighted-check').checked;
+      const v = { name, domain };
+      if (weighted) {
+        const wInputs = card.querySelectorAll('.weight-input');
+        v.weights = Array.from(wInputs).map(i => parseFloat(i.value) || 0);
+      }
+      variables.push(v);
+    });
+
+    if (variables.length === 0) { Toast.show('Add at least one variable', 'error'); return null; }
+    for (const v of variables) {
+      if (!v.name) { Toast.show('Variable name cannot be empty', 'error'); return null; }
+      if (v.domain.length < 1) { Toast.show(`Variable "${v.name}" needs a domain`, 'error'); return null; }
+    }
+
+    const constraints = [];
+    document.querySelectorAll('#constraints-container .constraint-item').forEach(card => {
+      constraints.push(this._readConstraintFromCard(card));
+    });
+
+    const queryCard = document.querySelector('#query-container .item-card');
+    if (!queryCard) { Toast.show('Query is required', 'error'); return null; }
+    const query = this._readConstraintFromCard(queryCard);
+
+    return { variables, constraints, query };
+  },
+
+  fromPuzzleSpec(spec) {
+    // Clear
+    document.getElementById('variables-container').innerHTML = '';
+    const cc = document.getElementById('constraints-container');
+    cc.innerHTML = '<p class="text-muted text-sm" id="no-constraints-msg">No constraints (unconditional probability)</p>';
+    document.getElementById('no-constraints-msg').style.display = spec.constraints.length === 0 ? '' : 'none';
+    varCounter = 0;
+
+    // Variables
+    for (const v of spec.variables) {
+      this.addVariable(v.name, v.domain, v.weights || null);
+      varCounter++;
+    }
+
+    // Constraints
+    for (const c of spec.constraints) {
+      this.addConstraint(c.type, c);
+    }
+
+    // Query
+    this.setQuery(spec.query.type, spec.query);
+  },
+
+  clear() {
+    document.getElementById('variables-container').innerHTML = '';
+    const cc = document.getElementById('constraints-container');
+    cc.innerHTML = '<p class="text-muted text-sm" id="no-constraints-msg">No constraints (unconditional probability)</p>';
+    varCounter = 1;
+    this.addVariable('c1', ['H', 'T'], null);
+    this.setQuery('count_eq', { values: ['H'], vars: ['c1'], op: '==', k: 1 });
+  }
+};
+
+// ── Results ──────────────────────────────────────────────────────
+const Results = {
+  show() {
+    document.getElementById('results-placeholder').style.display = 'none';
+    const c = document.getElementById('results-content');
+    c.style.display = '';
+    c.innerHTML = '';
+    return c;
+  },
+
+  showExact(data, explainData) {
+    const c = this.show();
+    let html = this._probCard(data.probability, data.counts, data.weighted);
+
+    // State counts
+    html += this._countsCard(data.counts);
+
+    // Explanation
+    if (explainData && explainData.explanation) {
+      html += `<div class="card anim-in" style="animation-delay:0.15s">
+        <div class="card-header"><h2>Explanation</h2>
+          <button class="btn btn-secondary btn-sm copy-explain-btn">Copy</button></div>
+        <div class="explanation-pre">${this._highlightExplanation(explainData.explanation)}</div>
+      </div>`;
+    }
+
+    // State explorer
+    if (data.given_states && data.given_states.length > 0) {
+      html += this._stateExplorer(data);
+    }
+
+    // Export bar
+    html += this._exportBar(data);
+
+    c.innerHTML = html;
+    this._animateBar(data.probability);
+    this._bindCopy(c, data, explainData);
+  },
+
+  showMC(data) {
+    const c = this.show();
+    let html = this._probCard(data.probability, null, false);
+
+    // CI
+    const [lo, hi] = data.confidence_interval;
+    html += `<div class="card anim-in" style="animation-delay:0.1s">
+      <h3>Confidence Interval <span class="badge badge-accent">${(data.confidence_level * 100).toFixed(0)}%</span></h3>
+      <div style="font-family:var(--font-mono);font-size:1rem;margin-top:0.4rem;text-align:center">
+        [${lo.toFixed(4)}, ${hi.toFixed(4)}]
+      </div>
+      <div class="ci-bar-wrap">
+        <div class="ci-bar-range" style="left:${lo*100}%;width:${(hi-lo)*100}%"></div>
+        <div class="ci-bar-point" style="left:${data.probability*100}%"></div>
+      </div>
+    </div>`;
+
+    // MC Counts
+    html += `<div class="card anim-in" style="animation-delay:0.15s">
+      <h3>Sampling Counts</h3>
+      <div class="counts-grid">
+        <div class="count-item"><div class="count-val">${data.counts.trials.toLocaleString()}</div><div class="count-label">Trials</div></div>
+        <div class="count-item"><div class="count-val">${data.counts.given_hits.toLocaleString()}</div><div class="count-label">Given Hits</div></div>
+        <div class="count-item"><div class="count-val">${data.counts.query_hits.toLocaleString()}</div><div class="count-label">Query Hits</div></div>
+      </div>
+    </div>`;
+
+    html += this._exportBar(data);
+    c.innerHTML = html;
+    this._animateBar(data.probability);
+    this._bindCopy(c, data, null);
+  },
+
+  showCompare(exactData, mcData) {
+    const c = this.show();
+    const exactPct = (exactData.probability * 100).toFixed(2);
+    const mcPct = (mcData.probability * 100).toFixed(2);
+    const delta = Math.abs(exactData.probability - mcData.probability);
+    const deltaClass = delta < 0.01 ? 'badge-success' : delta < 0.05 ? 'badge-warning' : 'badge-accent';
+
+    let html = `<div class="card anim-in">
+      <h2 style="text-align:center;margin-bottom:0.5rem">Comparison <span class="badge ${deltaClass}">\u0394 = ${(delta*100).toFixed(2)}%</span></h2>
+      <div class="compare-grid">
+        <div class="compare-card">
+          <h3>Exact</h3>
+          <div class="prob-hero" style="padding:0.75rem 0">
+            <div class="prob-pct" style="font-size:2rem">${exactPct}%</div>
+            <div class="prob-frac">${toFraction(exactData.counts.hit, exactData.counts.given)}</div>
+          </div>
+          <div class="counts-grid">
+            <div class="count-item"><div class="count-val">${exactData.counts.total}</div><div class="count-label">Total</div></div>
+            <div class="count-item"><div class="count-val">${exactData.counts.given}</div><div class="count-label">Given</div></div>
+            <div class="count-item"><div class="count-val">${exactData.counts.hit}</div><div class="count-label">Hit</div></div>
+          </div>
+        </div>
+        <div class="compare-card">
+          <h3>Monte Carlo</h3>
+          <div class="prob-hero" style="padding:0.75rem 0">
+            <div class="prob-pct" style="font-size:2rem">${mcPct}%</div>
+            <div class="prob-dec">[${mcData.confidence_interval[0].toFixed(4)}, ${mcData.confidence_interval[1].toFixed(4)}]</div>
+          </div>
+          <div class="counts-grid">
+            <div class="count-item"><div class="count-val">${mcData.counts.trials.toLocaleString()}</div><div class="count-label">Trials</div></div>
+            <div class="count-item"><div class="count-val">${mcData.counts.given_hits.toLocaleString()}</div><div class="count-label">Given</div></div>
+            <div class="count-item"><div class="count-val">${mcData.counts.query_hits.toLocaleString()}</div><div class="count-label">Hit</div></div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+    html += this._exportBar({ exact: exactData, mc: mcData });
+    c.innerHTML = html;
+  },
+
+  _probCard(prob, counts, weighted) {
+    const pct = (prob * 100).toFixed(2);
+    const frac = counts ? toFraction(counts.hit, counts.given) : '';
+    return `<div class="card anim-in">
+      <div class="prob-hero">
+        <div class="prob-pct">${pct}%</div>
+        ${frac ? `<div class="prob-frac">${frac}</div>` : ''}
+        <div class="prob-dec">${prob.toFixed(6)}</div>
+        ${weighted ? '<span class="badge badge-warning" style="margin-top:0.3rem">Weighted</span>' : ''}
+      </div>
+      <div class="prob-bar-wrap"><div class="prob-bar-fill" id="prob-bar"></div></div>
+    </div>`;
+  },
+
+  _countsCard(counts) {
+    return `<div class="card anim-in" style="animation-delay:0.1s">
+      <h3>State Counts</h3>
+      <div class="counts-grid">
+        <div class="count-item"><div class="count-val">${counts.total.toLocaleString()}</div><div class="count-label">Total</div></div>
+        <div class="count-item"><div class="count-val">${counts.given.toLocaleString()}</div><div class="count-label">Given</div></div>
+        <div class="count-item"><div class="count-val">${counts.hit.toLocaleString()}</div><div class="count-label">Hit</div></div>
+      </div>
+    </div>`;
+  },
+
+  _stateExplorer(data) {
+    const vars = Object.keys(data.given_states[0] || {});
+    const hitSet = new Set((data.hit_states || []).map(s => JSON.stringify(s)));
+
+    let rows = data.given_states.map(s => {
+      const isHit = hitSet.has(JSON.stringify(s));
+      return `<tr class="${isHit ? 'hit' : ''}">${vars.map(v => `<td>${escapeHtml(s[v])}</td>`).join('')}<td>${isHit ? 'Yes' : ''}</td></tr>`;
+    }).join('');
+
+    return `<div class="card anim-in" style="animation-delay:0.2s">
+      <div class="collapsible-header expanded" onclick="this.classList.toggle('expanded');this.nextElementSibling.classList.toggle('expanded')">
+        State Explorer <span class="badge badge-accent" style="margin-left:0.5rem">${data.given_states.length} states</span>
+      </div>
+      <div class="collapsible-body expanded">
+        <div class="state-table-wrap">
+          <table class="state-table">
+            <thead><tr>${vars.map(v => `<th>${escapeHtml(v)}</th>`).join('')}<th>Query Hit</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  },
+
+  _highlightExplanation(text) {
+    let h = escapeHtml(text);
+    // Highlight sections
+    h = h.replace(/^(Variables:|Constraints \(given\):|Query:|State counts:|P\(.*)/gm, '<span class="hl-section">$1</span>');
+    // Highlight numbers
+    h = h.replace(/\b(\d+)\b/g, '<span class="hl-num">$1</span>');
+    // Highlight operators
+    h = h.replace(/(==|&gt;=|&lt;=|&gt;|&lt;)/g, '<span class="hl-op">$1</span>');
+    // Highlight result line
+    h = h.replace(/(P\(query \| given\).*)/g, '<span class="hl-result">$1</span>');
+    return h;
+  },
+
+  _exportBar(data) {
+    return `<div style="display:flex;gap:0.4rem;margin-top:0.75rem;flex-wrap:wrap">
+      <button class="btn btn-secondary btn-sm copy-result-btn">Copy Result JSON</button>
+    </div>`;
+  },
+
+  _animateBar(prob) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const bar = document.getElementById('prob-bar');
+        if (bar) bar.style.width = `${Math.min(prob * 100, 100)}%`;
+      });
+    });
+  },
+
+  _bindCopy(container, data, explainData) {
+    container.querySelectorAll('.copy-result-btn').forEach(btn => {
+      btn.addEventListener('click', () => Share.copyToClipboard(JSON.stringify(data, null, 2), 'Result JSON'));
+    });
+    container.querySelectorAll('.copy-explain-btn').forEach(btn => {
+      btn.addEventListener('click', () => Share.copyToClipboard(explainData.explanation, 'Explanation'));
+    });
+  }
+};
+
+// ── Solver ────────────────────────────────────────────────────────
+const Solver = {
+  currentTab: 'exact',
+
+  init() {
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+        this.currentTab = tab.dataset.tab;
+      });
+    });
+
+    // Trace toggle
+    document.getElementById('exact-trace').addEventListener('change', (e) => {
+      document.getElementById('trace-max-row').style.display = e.target.checked ? '' : 'none';
+    });
+
+    // Solve buttons
+    document.getElementById('btn-solve-exact').addEventListener('click', () => this.runExact());
+    document.getElementById('btn-solve-mc').addEventListener('click', () => this.runMC());
+    document.getElementById('btn-solve-compare').addEventListener('click', () => this.runCompare());
+  },
+
+  _setLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    if (loading) {
+      btn.disabled = true;
+      btn._origText = btn.textContent;
+      btn.innerHTML = '<span class="spinner"></span> Solving...';
+    } else {
+      btn.disabled = false;
+      btn.textContent = btn._origText || 'Solve';
+    }
+  },
+
+  async runExact() {
+    const puzzle = Builder.toPuzzleSpec();
+    if (!puzzle) return;
+    this._setLoading('btn-solve-exact', true);
+    try {
+      const trace = document.getElementById('exact-trace').checked;
+      const maxTrace = parseInt(document.getElementById('exact-max-trace').value) || 50;
+      const wantExplain = document.getElementById('exact-explain').checked;
+
+      const promises = [API.solveExact(puzzle, trace, maxTrace)];
+      if (wantExplain) promises.push(API.solveExplain(puzzle));
+
+      const results = await Promise.all(promises);
+      const data = results[0];
+      const explainData = results[1] || null;
+
+      Results.showExact(data, explainData);
+      History.add(puzzle, { type: 'exact', data, explainData });
+      Toast.show('Solved!', 'success');
+    } catch (err) {
+      Toast.show(err.message, 'error', 5000);
+    } finally {
+      this._setLoading('btn-solve-exact', false);
+    }
+  },
+
+  async runMC() {
+    const puzzle = Builder.toPuzzleSpec();
+    if (!puzzle) return;
+    this._setLoading('btn-solve-mc', true);
+    try {
+      const nSamples = parseInt(document.getElementById('mc-samples').value) || 10000;
+      const confidence = parseFloat(document.getElementById('mc-confidence').value) || 0.95;
+      const seedVal = document.getElementById('mc-seed').value.trim();
+      const seed = seedVal ? parseInt(seedVal) : null;
+
+      const data = await API.solveMC(puzzle, nSamples, confidence, seed);
+      Results.showMC(data);
+      History.add(puzzle, { type: 'mc', data });
+      Toast.show('Monte Carlo complete!', 'success');
+    } catch (err) {
+      Toast.show(err.message, 'error', 5000);
+    } finally {
+      this._setLoading('btn-solve-mc', false);
+    }
+  },
+
+  async runCompare() {
+    const puzzle = Builder.toPuzzleSpec();
+    if (!puzzle) return;
+    this._setLoading('btn-solve-compare', true);
+    try {
+      const nSamples = parseInt(document.getElementById('cmp-samples').value) || 10000;
+      const confidence = parseFloat(document.getElementById('cmp-confidence').value) || 0.95;
+
+      const [exactData, mcData] = await Promise.all([
+        API.solveExact(puzzle, false, 50),
+        API.solveMC(puzzle, nSamples, confidence, null)
+      ]);
+
+      Results.showCompare(exactData, mcData);
+      History.add(puzzle, { type: 'compare', exactData, mcData });
+      Toast.show('Comparison complete!', 'success');
+    } catch (err) {
+      Toast.show(err.message, 'error', 5000);
+    } finally {
+      this._setLoading('btn-solve-compare', false);
+    }
+  },
+
+  run() {
+    if (this.currentTab === 'exact') this.runExact();
+    else if (this.currentTab === 'mc') this.runMC();
+    else this.runCompare();
+  }
+};
+
+// ── History ──────────────────────────────────────────────────────
+const History = {
+  items: [],
+  MAX: 50,
+
+  load() {
+    try {
+      this.items = JSON.parse(localStorage.getItem('ppe-history') || '[]');
+    } catch { this.items = []; }
+  },
+
+  save() {
+    localStorage.setItem('ppe-history', JSON.stringify(this.items.slice(0, this.MAX)));
+  },
+
+  add(puzzle, results) {
+    const nVars = puzzle.variables.length;
+    const nCons = puzzle.constraints.length;
+    const prob = results.data ? results.data.probability :
+                 results.exactData ? results.exactData.probability : 0;
+    this.items.unshift({
+      timestamp: new Date().toISOString(),
+      puzzle,
+      results,
+      summary: `${nVars} var${nVars>1?'s':''}, ${nCons} constraint${nCons>1?'s':''}`,
+      probability: prob,
+      solverType: results.type
+    });
+    if (this.items.length > this.MAX) this.items.length = this.MAX;
+    this.save();
+    this.render();
+  },
+
+  render() {
+    const list = document.getElementById('history-list');
+    if (this.items.length === 0) {
+      list.innerHTML = '<p class="text-muted text-sm" style="text-align:center;padding:2rem">No history yet</p>';
+      return;
+    }
+    list.innerHTML = this.items.map((item, i) => {
+      const time = new Date(item.timestamp).toLocaleString();
+      const pct = (item.probability * 100).toFixed(1);
+      return `<div class="history-item" data-idx="${i}">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span class="hi-prob">${pct}%</span>
+          <span class="badge badge-accent">${item.solverType}</span>
+        </div>
+        <div class="hi-desc">${item.summary}</div>
+        <div class="hi-time">${time}</div>
+      </div>`;
+    }).join('');
+
+    list.querySelectorAll('.history-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const idx = parseInt(el.dataset.idx);
+        this.restore(idx);
+      });
+    });
+  },
+
+  restore(idx) {
+    const item = this.items[idx];
+    if (!item) return;
+    Builder.fromPuzzleSpec(item.puzzle);
+    // Re-display results
+    const r = item.results;
+    if (r.type === 'exact') Results.showExact(r.data, r.explainData);
+    else if (r.type === 'mc') Results.showMC(r.data);
+    else if (r.type === 'compare') Results.showCompare(r.exactData, r.mcData);
+    this.closeDrawer();
+    Toast.show('Puzzle restored from history', 'success');
+  },
+
+  clear() {
+    this.items = [];
+    this.save();
+    this.render();
+    Toast.show('History cleared', 'info');
+  },
+
+  openDrawer() {
+    document.getElementById('history-drawer').classList.add('open');
+    document.getElementById('history-overlay').classList.add('open');
+    this.render();
+  },
+
+  closeDrawer() {
+    document.getElementById('history-drawer').classList.remove('open');
+    document.getElementById('history-overlay').classList.remove('open');
+  }
+};
+
+// ── JSON Editor ──────────────────────────────────────────────────
+const JsonEditor = {
+  open() {
+    const puzzle = Builder.toPuzzleSpec();
+    const text = puzzle ? JSON.stringify(puzzle, null, 2) : '{}';
+    document.getElementById('json-textarea').value = text;
+    document.getElementById('json-error').textContent = '';
+    document.getElementById('json-modal').classList.add('open');
+  },
+
+  close() {
+    document.getElementById('json-modal').classList.remove('open');
+  },
+
+  apply() {
+    const text = document.getElementById('json-textarea').value;
+    try {
+      const spec = JSON.parse(text);
+      if (!spec.variables || !spec.query) throw new Error('Missing "variables" or "query" field');
+      if (!Array.isArray(spec.variables)) throw new Error('"variables" must be an array');
+      if (!spec.constraints) spec.constraints = [];
+      Builder.fromPuzzleSpec(spec);
+      this.close();
+      Toast.show('Puzzle loaded from JSON', 'success');
+    } catch (err) {
+      document.getElementById('json-error').textContent = err.message;
+    }
+  }
+};
+
+// ── Share ─────────────────────────────────────────────────────────
+const Share = {
+  async copyToClipboard(text, label) {
+    try {
+      await navigator.clipboard.writeText(text);
+      Toast.show(`${label} copied!`, 'success');
+    } catch {
+      Toast.show('Copy failed', 'error');
+    }
+  },
+
+  encodePuzzleToURL() {
+    const puzzle = Builder.toPuzzleSpec();
+    if (!puzzle) return;
+    const encoded = btoa(JSON.stringify(puzzle));
+    const url = `${location.origin}${location.pathname}?p=${encoded}`;
+    this.copyToClipboard(url, 'Share URL');
+  },
+
+  decodePuzzleFromURL() {
+    const params = new URLSearchParams(location.search);
+    const p = params.get('p');
+    if (!p) return null;
+    try { return JSON.parse(atob(p)); } catch { return null; }
+  }
+};
+
+// ── Shortcuts ────────────────────────────────────────────────────
+const Shortcuts = {
+  init() {
+    document.addEventListener('keydown', (e) => {
+      // Ctrl+Enter -> run solver
+      if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); Solver.run(); }
+      // Ctrl+Shift+J -> JSON editor
+      if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) { e.preventDefault(); JsonEditor.open(); }
+      // Ctrl+Shift+H -> History
+      if (e.ctrlKey && e.shiftKey && (e.key === 'H' || e.key === 'h')) {
+        e.preventDefault();
+        const drawer = document.getElementById('history-drawer');
+        drawer.classList.contains('open') ? History.closeDrawer() : History.openDrawer();
+      }
+      // Escape -> close modals
+      if (e.key === 'Escape') {
+        JsonEditor.close();
+        History.closeDrawer();
+        document.getElementById('shortcuts-tip').classList.remove('show');
+      }
+    });
+  }
+};
+
+// ── Init ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  Theme.init();
+  Builder.init();
+  Solver.init();
+  History.load();
+  History.render();
+  Shortcuts.init();
+
+  // Library dropdown
+  const libSelect = document.getElementById('library-select');
+  LIBRARY.forEach((entry, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `${entry.name} — ${entry.desc}`;
+    libSelect.appendChild(opt);
+  });
+  libSelect.addEventListener('change', () => {
+    const idx = parseInt(libSelect.value);
+    if (!isNaN(idx) && LIBRARY[idx]) {
+      Builder.fromPuzzleSpec(JSON.parse(JSON.stringify(LIBRARY[idx].spec)));
+      Toast.show(`Loaded: ${LIBRARY[idx].name}`, 'success');
+    }
+  });
+
+  // Generators
+  document.getElementById('btn-gen-coin').addEventListener('click', async () => {
+    try {
+      const n = document.getElementById('gen-coin-n').value;
+      const spec = await API.generateCoin(n);
+      Builder.fromPuzzleSpec(spec);
+      Toast.show('Random coin puzzle generated', 'success');
+    } catch (err) { Toast.show(err.message, 'error'); }
+  });
+  document.getElementById('btn-gen-dice').addEventListener('click', async () => {
+    try {
+      const n = document.getElementById('gen-dice-n').value;
+      const sides = document.getElementById('gen-dice-sides').value;
+      const spec = await API.generateDice(n, sides);
+      Builder.fromPuzzleSpec(spec);
+      Toast.show('Random dice puzzle generated', 'success');
+    } catch (err) { Toast.show(err.message, 'error'); }
+  });
+
+  // History drawer
+  document.getElementById('btn-history').addEventListener('click', () => History.openDrawer());
+  document.getElementById('btn-close-history').addEventListener('click', () => History.closeDrawer());
+  document.getElementById('history-overlay').addEventListener('click', () => History.closeDrawer());
+  document.getElementById('btn-clear-history').addEventListener('click', () => History.clear());
+
+  // JSON editor
+  document.getElementById('btn-json-editor').addEventListener('click', () => JsonEditor.open());
+  document.getElementById('btn-close-json').addEventListener('click', () => JsonEditor.close());
+  document.getElementById('btn-json-cancel').addEventListener('click', () => JsonEditor.close());
+  document.getElementById('btn-json-apply').addEventListener('click', () => JsonEditor.apply());
+
+  // Share & copy
+  document.getElementById('btn-copy-puzzle').addEventListener('click', () => {
+    const puzzle = Builder.toPuzzleSpec();
+    if (puzzle) Share.copyToClipboard(JSON.stringify(puzzle, null, 2), 'Puzzle JSON');
+  });
+  document.getElementById('btn-share-url').addEventListener('click', () => Share.encodePuzzleToURL());
+
+  // Shortcuts help
+  document.getElementById('btn-shortcuts').addEventListener('click', () => {
+    document.getElementById('shortcuts-tip').classList.toggle('show');
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#btn-shortcuts') && !e.target.closest('#shortcuts-tip'))
+      document.getElementById('shortcuts-tip').classList.remove('show');
+  });
+
+  // Load from URL if shared
+  const sharedPuzzle = Share.decodePuzzleFromURL();
+  if (sharedPuzzle) {
+    Builder.fromPuzzleSpec(sharedPuzzle);
+    Toast.show('Puzzle loaded from URL', 'success');
+  }
+});
+</script>
+</body>
+</html>
