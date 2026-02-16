@@ -27,7 +27,7 @@ def generate_coin_puzzle(
 
     # constraint like #H >= k1 or #H <= k1
     op1 = rng.choice([">=", "<="])
-    k1 = rng.randint(1, n_coins - 1)  # avoid 0 and n (often too trivial)
+    k1 = rng.randint(1, max(1, n_coins - 1))
 
     constraint = CountConstraint(values=["H"], vars=names, op=op1, k=k1)
 
