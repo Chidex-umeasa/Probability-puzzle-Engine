@@ -1,39 +1,76 @@
-Probability Puzzle Engine (PPE)
-An interactive probability puzzle solver and generator designed to model, solve, and explain discrete probability problems using exact enumeration and simulation-based methods.
-This project is inspired by the style of probability and combinatorics puzzles commonly used in quantitative trading and systems interviews, with an emphasis on correctness, transparency, and testability.
+# Probability Puzzle Engine (PPE)
 
-    Features (Current)
-Exact Probability Solver
+An interactive probability puzzle solver and generator designed to model, solve, and explain discrete probability problems using exact enumeration and Monte Carlo simulation.
+
+Inspired by probability and combinatorics puzzles commonly used in quantitative trading and systems interviews, with an emphasis on correctness, transparency, and testability.
+
+## Features
+
+### Exact Probability Solver
 - Solves discrete probability puzzles by explicitly enumerating the sample space
-- Supports conditional probabilities of the form
-   𝑃 (query | constraints )
-- Produces both:
- - Final probability
- - Internal counts (total states, conditioned states, matching states)
+- Computes conditional probabilities of the form P(query | constraints)
+- Supports **weighted outcomes** (biased coins, loaded dice)
+- Returns probability, internal counts (total / given / hit), and optional state traces
 
-    Puzzle DSL (Domain-Specific Language)
-- Structured JSON-based puzzle specification
-- Clear separation between:
- - Variables and domains
- - Conditioning constraints (“given”)
- - Query event
+### Monte Carlo Solver
+- Estimates probabilities via rejection sampling
+- Configurable sample count, confidence level, and random seed
+- Returns Wilson score confidence intervals
 
-    API Interface
-- FastAPI backend with a clean /solve/exact endpoint
-- Interactive testing via Swagger UI (/docs)
-- Designed to support future solver backends without API changes
+### Human-Readable Explanations
+- Step-by-step breakdown of variables, constraints, query, state counts, and final probability
+- GCD-reduced fractions (e.g. "1/3" instead of raw decimals)
 
-    Testing
+### Puzzle DSL (Domain-Specific Language)
+- Structured JSON-based puzzle specification using Pydantic v2 models
+- Three constraint types:
+  - **CountConstraint** (`count_eq`) — count of matching values across variables
+  - **ValueConstraint** (`value_eq`) — single variable equals a specific value
+  - **SumConstraint** (`sum_eq`) — sum of numeric variable values
+- All constraints support operators: `==`, `>=`, `<=`, `>`, `<`
 
-- Unit-tested with pytest
-- Deterministic, reproducible results
-- Covers canonical probability puzzles (e.g. coin flips) 
+### Puzzle Generators
+- **Coin puzzles** — random conditional coin-flip problems
+- **Dice puzzles** — random sum/count constraints on multi-sided dice
+- Seeded for reproducibility
 
-Example Puzzle
-Problem:
-What is the probability of getting two heads, given that at least one head appears when flipping two fair coins?
+### Web UI
+- Full single-page interactive interface served at `/`
+- Puzzle builder with variable, constraint, and query editors
+- Preset buttons for coins and dice
+- Puzzle library with 8 classic problems (Two Coins, Dice Sum=7, Double Sixes, Loaded Coin, etc.)
+- Three solver modes: Exact, Monte Carlo, and Compare (side-by-side)
+- Animated probability bar, state counts, confidence interval visualization
+- State explorer table with given/hit state highlighting
+- Dark/light theme with localStorage persistence
+- History drawer (last 50 solves, click to restore)
+- JSON editor modal for raw puzzle editing
+- Sharing via URL (base64-encoded) and clipboard
+- Keyboard shortcuts (Ctrl+Enter to solve, Ctrl+Shift+J for JSON editor)
+- Responsive layout (2-column desktop, single-column mobile)
 
-Puzzle Specification
+### API Interface
+- FastAPI backend with Swagger UI at `/docs`
+- Endpoints:
+  - `GET /health` — health check
+  - `GET /generate/coin` — generate a random coin puzzle
+  - `GET /generate/dice` — generate a random dice puzzle
+  - `POST /solve/exact` — solve by exact enumeration (optional trace)
+  - `POST /solve/monte_carlo` — solve via Monte Carlo sampling
+  - `POST /solve/explain` — solve and return human-readable explanation
+
+### Testing
+- 71 unit tests covering all modules
+- Test suites: exact solver (coins & dice), Monte Carlo, constraints, weighted outcomes, generators, explanations
+
+---
+
+## Example Puzzle
+
+**Problem:** What is the probability of getting two heads, given that at least one head appears when flipping two fair coins?
+
+**Puzzle Specification:**
+```json
 {
   "variables": [
     { "name": "c1", "domain": ["H", "T"] },
@@ -50,66 +87,134 @@ Puzzle Specification
     "k": 2
   }
 }
+```
 
-Output
+**Output:**
+```json
 {
   "probability": 0.3333333333333333,
-  "counts": {
-    "total": 4,
-    "given": 3,
-    "hit": 1
-  }
+  "counts": { "total": 4, "given": 3, "hit": 1 },
+  "weighted": false,
+  "explanation": "Variables: c1 ∈ {H, T}, c2 ∈ {H, T}\n..."
 }
+```
 
-Project Structure
+---
+
+## Project Structure
+
+```
 probability-puzzle-engine/
 ├── README.md
+├── LICENSE
 ├── pyproject.toml
 ├── src/
 │   └── ppe/
 │       ├── api/
-│       │   └── main.py          # FastAPI entrypoint
+│       │   └── main.py              # FastAPI entrypoint + UI serving
 │       ├── core/
-│       │   ├── exact.py         # Exact enumeration solver
-│       │   ├── state_space.py   # Sample space construction
-│       │   └── constraints.py   # Constraint evaluation logic
+│       │   ├── exact.py             # Exact enumeration solver
+│       │   ├── monte_carlo.py       # Monte Carlo solver with Wilson CI
+│       │   ├── explanation.py       # Human-readable explanation generator
+│       │   ├── state_space.py       # Sample space construction
+│       │   └── constraint.py        # Constraint evaluation logic
 │       ├── dsl/
-│       │   └── schema.py        # Puzzle specification models
-│       └── generate/            # Puzzle generators (WIP)
+│       │   └── schema.py            # Pydantic v2 puzzle specification models
+│       ├── generate/
+│       │   ├── coin_puzzles.py      # Random coin puzzle generator
+│       │   └── dice_puzzles.py      # Random dice puzzle generator
+│       └── static/
+│           └── index.html           # Single-page web UI
 └── tests/
-    └── test_exact_coin.py
+    ├── test_exact_coin.py
+    ├── test_exact_dice.py
+    ├── test_monte_carlo.py
+    ├── test_constraints.py
+    ├── test_weighted.py
+    ├── test_generators.py
+    └── test_explanation.py
+```
 
-Installation
+---
+
+## Installation
+
+```bash
 python -m venv .venv
+
 # Windows
 .venv\Scripts\activate
+
 # macOS / Linux
-# source .venv/bin/activate
+source .venv/bin/activate
 
 pip install -e .[dev]
+```
 
-Running the Server
-uvicorn ppe.api.main:app --reload --port 8123
+## Running the Server
+
+```bash
+uvicorn ppe.api.main:app --reload --port 8200
+```
+
 Then open:
-http://127.0.0.1:8123/docs
-Running Tests
-pytest -q
+- **Web UI:** http://127.0.0.1:8200/
+- **API Docs:** http://127.0.0.1:8200/docs
 
-    Design Philosophy
-Correctness first: all probabilities are derived from explicit state counting
-No hidden math: intermediate counts are exposed
-Composable architecture: solvers, constraints, and generators are modular
-Interview-realistic: models how probability problems are reasoned about step-by-step
+## Running Tests
 
-    Roadmap
+```bash
+pytest -v
+```
+
+All 71 tests should pass, covering exact solving, Monte Carlo estimation, constraint evaluation, weighted outcomes, puzzle generators, and explanations.
+
+---
+
+## API Quick Reference
+
+```bash
+# Health check
+curl http://127.0.0.1:8200/health
+
+# Generate a random 3-coin puzzle
+curl http://127.0.0.1:8200/generate/coin?n_coins=3
+
+# Generate a random 2d6 dice puzzle
+curl "http://127.0.0.1:8200/generate/dice?n_dice=2&n_sides=6"
+
+# Solve exact
+curl -X POST http://127.0.0.1:8200/solve/exact \
+  -H "Content-Type: application/json" \
+  -d '{"variables":[{"name":"c1","domain":["H","T"]},{"name":"c2","domain":["H","T"]}],"constraints":[{"type":"count_eq","values":["H"],"vars":["c1","c2"],"op":">=","k":1}],"query":{"type":"count_eq","values":["H"],"vars":["c1","c2"],"op":"==","k":2}}'
+
+# Monte Carlo (10,000 samples)
+curl -X POST "http://127.0.0.1:8200/solve/monte_carlo?n_samples=10000" \
+  -H "Content-Type: application/json" \
+  -d '{"variables":[{"name":"c1","domain":["H","T"]},{"name":"c2","domain":["H","T"]}],"constraints":[],"query":{"type":"count_eq","values":["H"],"vars":["c1","c2"],"op":"==","k":2}}'
+```
+
+---
+
+## Design Philosophy
+
+- **Correctness first** — all probabilities derived from explicit state counting or well-defined sampling
+- **No hidden math** — intermediate counts and confidence intervals are always exposed
+- **Composable architecture** — solvers, constraints, and generators are modular and independently testable
+- **Interview-realistic** — models how probability problems are reasoned about step-by-step
+
+## Roadmap
+
 Planned extensions:
-- Weighted outcomes (biased coins, non-uniform dice)
-- Monte Carlo solver with confidence intervals
-- Explanation traces (“why this probability is correct”)
-- Puzzle generator with uniqueness checks
-- Web-based interactive UI
 - Optional OCaml backend for functional correctness guarantees
+- More puzzle types (card draws, urn problems, Bayesian updates)
+- Puzzle difficulty scoring and uniqueness checks
+- Batch puzzle generation and export
 
-    Status
-🚧 Active development
-Currently supports exact solving for discrete, finite probability spaces.
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## Author
+
+Alex Chidera Umeasalugo
