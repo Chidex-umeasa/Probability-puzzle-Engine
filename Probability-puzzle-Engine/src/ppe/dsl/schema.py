@@ -23,12 +23,15 @@ class VariableSpec(BaseModel):
         return self
 
 
+Op = Literal["==", "!=", ">=", "<=", ">", "<"]
+
+
 # Count how many vars are in a set of values and compare to k.
 class CountConstraint(BaseModel):
     type: Literal["count_eq"] = "count_eq"
     values: List[str]                 # values to count, e.g. ["H"]
     vars: List[str]                   # variable names to look at
-    op: Literal["==", ">=", "<=", ">", "<"]
+    op: Op
     k: int = Field(ge=0)
 
 
@@ -43,7 +46,7 @@ class ValueConstraint(BaseModel):
 class SumConstraint(BaseModel):
     type: Literal["sum_eq"] = "sum_eq"
     vars: List[str]                   # variable names (domain values must be int-castable)
-    op: Literal["==", ">=", "<=", ">", "<"]
+    op: Op
     k: int = Field(ge=0)
 
 
@@ -61,3 +64,16 @@ class PuzzleSpec(BaseModel):
     variables: List[VariableSpec]
     constraints: List[ConstraintSpec] = Field(default_factory=list)
     query: EventSpec
+
+    @model_validator(mode="after")
+    def validate_variable_references(self) -> "PuzzleSpec":
+        defined = {v.name for v in self.variables}
+        for c in [*self.constraints, self.query]:
+            if isinstance(c, (CountConstraint, SumConstraint)):
+                for vname in c.vars:
+                    if vname not in defined:
+                        raise ValueError(f"Constraint references undefined variable: {vname!r}")
+            elif isinstance(c, ValueConstraint):
+                if c.var not in defined:
+                    raise ValueError(f"Constraint references undefined variable: {c.var!r}")
+        return self

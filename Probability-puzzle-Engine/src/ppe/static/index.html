@@ -612,6 +612,49 @@ const LIBRARY = [
       constraints: [{ type: "count_eq", values: ["H"], vars: ["c1","c2"], op: ">=", k: 1 }],
       query: { type: "count_eq", values: ["H"], vars: ["c1","c2"], op: "==", k: 2 }
     }
+  },
+  {
+    name: "Three Coins \u2014 Majority Heads",
+    desc: "P(\u22652H) = 1/2",
+    spec: {
+      variables: [{ name:"c1",domain:["H","T"] },{ name:"c2",domain:["H","T"] },{ name:"c3",domain:["H","T"] }],
+      constraints: [],
+      query: { type:"count_eq", values:["H"], vars:["c1","c2","c3"], op:">=", k:2 }
+    }
+  },
+  {
+    name: "Three Dice \u2014 At Least One 6",
+    desc: "P \u2248 0.4213 (91/216)",
+    spec: {
+      variables: [
+        { name:"d1",domain:["1","2","3","4","5","6"] },
+        { name:"d2",domain:["1","2","3","4","5","6"] },
+        { name:"d3",domain:["1","2","3","4","5","6"] }
+      ],
+      constraints: [],
+      query: { type:"count_eq", values:["6"], vars:["d1","d2","d3"], op:">=", k:1 }
+    }
+  },
+  {
+    name: "Two Dice \u2014 Sum=11 | Sum\u226510",
+    desc: "P = 2/3",
+    spec: {
+      variables: [
+        { name:"d1",domain:["1","2","3","4","5","6"] },
+        { name:"d2",domain:["1","2","3","4","5","6"] }
+      ],
+      constraints: [{ type:"sum_eq", vars:["d1","d2"], op:">=", k:10 }],
+      query: { type:"sum_eq", vars:["d1","d2"], op:"==", k:11 }
+    }
+  },
+  {
+    name: "Loaded Die (2\u00d7 on 6)",
+    desc: "P(roll 6) = 2/7 \u2248 0.286",
+    spec: {
+      variables: [{ name:"die", domain:["1","2","3","4","5","6"], weights:[1,1,1,1,1,2] }],
+      constraints: [],
+      query: { type:"value_eq", var:"die", value:"6" }
+    }
   }
 ];
 
@@ -740,7 +783,7 @@ const Builder = {
         <div class="field"><label>Values</label><input type="text" class="input input-sm c-values" value="${data ? data.values.join(',') : 'H'}" placeholder="H"></div>
         <div class="field"><label>Vars</label><input type="text" class="input input-sm c-vars" value="${data ? data.vars.join(',') : getVarNames().join(',')}" placeholder="c1,c2"></div>
         <div class="field" style="flex:0 0 65px"><label>Op</label>
-          <select class="select input-sm c-op">${['==','>=','<=','>','<'].map(o => `<option ${data && data.op === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+          <select class="select input-sm c-op">${['==','!=','>=','<=','>','<'].map(o => `<option ${data && data.op === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
         </div>
         <div class="field" style="flex:0 0 55px"><label>k</label><input type="number" class="input input-sm c-k" value="${data ? data.k : 1}" min="0"></div>`;
     } else if (type === 'value_eq') {
@@ -751,7 +794,7 @@ const Builder = {
       fields = `
         <div class="field"><label>Vars</label><input type="text" class="input input-sm c-vars" value="${data ? data.vars.join(',') : getVarNames().join(',')}" placeholder="d1,d2"></div>
         <div class="field" style="flex:0 0 65px"><label>Op</label>
-          <select class="select input-sm c-op">${['==','>=','<=','>','<'].map(o => `<option ${data && data.op === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+          <select class="select input-sm c-op">${['==','!=','>=','<=','>','<'].map(o => `<option ${data && data.op === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
         </div>
         <div class="field" style="flex:0 0 55px"><label>k</label><input type="number" class="input input-sm c-k" value="${data ? data.k : 7}" min="0"></div>`;
     }
@@ -791,7 +834,7 @@ const Builder = {
         <div class="field"><label>Values</label><input type="text" class="input input-sm c-values" value="${data ? data.values.join(',') : 'H'}" placeholder="H"></div>
         <div class="field"><label>Vars</label><input type="text" class="input input-sm c-vars" value="${data ? data.vars.join(',') : getVarNames().join(',')}" placeholder="c1,c2"></div>
         <div class="field" style="flex:0 0 65px"><label>Op</label>
-          <select class="select input-sm c-op">${['==','>=','<=','>','<'].map(o => `<option ${data && data.op === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+          <select class="select input-sm c-op">${['==','!=','>=','<=','>','<'].map(o => `<option ${data && data.op === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
         </div>
         <div class="field" style="flex:0 0 55px"><label>k</label><input type="number" class="input input-sm c-k" value="${data ? data.k : 2}" min="0"></div>`;
     } else if (type === 'value_eq') {
@@ -802,7 +845,7 @@ const Builder = {
       fields = `
         <div class="field"><label>Vars</label><input type="text" class="input input-sm c-vars" value="${data ? data.vars.join(',') : getVarNames().join(',')}" placeholder="d1,d2"></div>
         <div class="field" style="flex:0 0 65px"><label>Op</label>
-          <select class="select input-sm c-op">${['==','>=','<=','>','<'].map(o => `<option ${data && data.op === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+          <select class="select input-sm c-op">${['==','!=','>=','<=','>','<'].map(o => `<option ${data && data.op === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
         </div>
         <div class="field" style="flex:0 0 55px"><label>k</label><input type="number" class="input input-sm c-k" value="${data ? data.k : 7}" min="0"></div>`;
     }
@@ -1358,7 +1401,7 @@ const Share = {
   encodePuzzleToURL() {
     const puzzle = Builder.toPuzzleSpec();
     if (!puzzle) return;
-    const encoded = btoa(JSON.stringify(puzzle));
+    const encoded = btoa(encodeURIComponent(JSON.stringify(puzzle)));
     const url = `${location.origin}${location.pathname}?p=${encoded}`;
     this.copyToClipboard(url, 'Share URL');
   },
@@ -1367,7 +1410,7 @@ const Share = {
     const params = new URLSearchParams(location.search);
     const p = params.get('p');
     if (!p) return null;
-    try { return JSON.parse(atob(p)); } catch { return null; }
+    try { return JSON.parse(decodeURIComponent(atob(p))); } catch { return null; }
   }
 };
 

@@ -5,6 +5,7 @@ from ppe.dsl.schema import CountConstraint, ValueConstraint, SumConstraint
 
 def _compare(x: int, op: str, k: int) -> bool:
     if op == "==": return x == k
+    if op == "!=": return x != k
     if op == ">=": return x >= k
     if op == "<=": return x <= k
     if op == ">":  return x > k

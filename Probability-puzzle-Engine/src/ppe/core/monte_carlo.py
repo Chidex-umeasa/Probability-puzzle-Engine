@@ -1,7 +1,7 @@
 from __future__ import annotations
-import math
 import random
 from dataclasses import dataclass
+from statistics import NormalDist
 from typing import Dict, Optional, Tuple
 
 from ppe.core.exact import _eval_constraint
@@ -20,6 +20,10 @@ def _sample_state(puzzle: PuzzleSpec, rng: random.Random) -> Dict[str, str]:
     return assign
 
 
+def _z_score(confidence: float) -> float:
+    return NormalDist().inv_cdf((1 + confidence) / 2)
+
+
 def _wilson_ci(hits: int, trials: int, confidence: float) -> Tuple[float, float]:
     """Wilson score confidence interval for a proportion."""
     if trials == 0:
@@ -28,21 +32,8 @@ def _wilson_ci(hits: int, trials: int, confidence: float) -> Tuple[float, float]
     p_hat = hits / trials
     denom = 1 + z * z / trials
     centre = (p_hat + z * z / (2 * trials)) / denom
-    margin = z * math.sqrt(p_hat * (1 - p_hat) / trials + z * z / (4 * trials * trials)) / denom
+    margin = z * (p_hat * (1 - p_hat) / trials + z * z / (4 * trials * trials)) ** 0.5 / denom
     return (max(0.0, centre - margin), min(1.0, centre + margin))
-
-
-def _z_score(confidence: float) -> float:
-    """Approximate z-score for common confidence levels."""
-    table = {0.90: 1.645, 0.95: 1.960, 0.99: 2.576}
-    if confidence in table:
-        return table[confidence]
-    # Fallback: normal approximation via Abramowitz & Stegun 26.2.17
-    p = (1 + confidence) / 2
-    t = math.sqrt(-2 * math.log(1 - p))
-    c = (2.515517, 0.802853, 0.010328)
-    d = (1.432788, 0.189269, 0.001308)
-    return t - (c[0] + c[1] * t + c[2] * t * t) / (1 + d[0] * t + d[1] * t * t + d[2] * t ** 3)
 
 
 @dataclass(frozen=True)

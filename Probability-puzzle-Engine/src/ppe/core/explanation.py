@@ -1,5 +1,5 @@
 from __future__ import annotations
-import math
+from math import gcd
 from typing import Union
 
 from ppe.core.exact import ExactSolveResult
@@ -8,19 +8,13 @@ from ppe.dsl.schema import (
 )
 
 
-def _gcd(a: int, b: int) -> int:
-    while b:
-        a, b = b, a % b
-    return a
-
-
 def _as_fraction(hit: int, given: int) -> str:
     """Return 'hit/given' reduced to lowest terms, or '0' / '1' for edge cases."""
     if given == 0:
         return "undefined (no states satisfy the constraints)"
     if hit == 0:
         return "0"
-    g = _gcd(hit, given)
+    g = gcd(hit, given)
     n, d = hit // g, given // g
     if d == 1:
         return str(n)

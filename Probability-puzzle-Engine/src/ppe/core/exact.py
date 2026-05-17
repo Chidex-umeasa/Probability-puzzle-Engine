@@ -1,10 +1,13 @@
 from __future__ import annotations
+import math
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from ppe.core.state_space import build_state_space
 from ppe.core.constraint import eval_count_constraint, eval_value_constraint, eval_sum_constraint
 from ppe.dsl.schema import PuzzleSpec, CountConstraint, ValueConstraint, SumConstraint
+
+_MAX_STATES = 1_000_000
 
 
 def _eval_constraint(assign: Dict[str, str], c) -> bool:
@@ -46,7 +49,16 @@ def solve_exact(puzzle: PuzzleSpec, trace: bool = False, max_trace: int = 50) ->
     If trace=True, returns up to max_trace example states for:
       - given_states: states satisfying all constraints
       - hit_states: states satisfying constraints AND query
+
+    Raises ValueError if the state space exceeds _MAX_STATES.
     """
+    n_states = math.prod(len(v.domain) for v in puzzle.variables)
+    if n_states > _MAX_STATES:
+        raise ValueError(
+            f"State space has {n_states:,} states (limit: {_MAX_STATES:,}). "
+            "Use the Monte Carlo solver for large puzzles."
+        )
+
     var_domains = [(v.name, v.domain) for v in puzzle.variables]
     is_weighted = any(v.weights is not None for v in puzzle.variables)
 

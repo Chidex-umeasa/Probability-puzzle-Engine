@@ -1,6 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from ppe.dsl.schema import PuzzleSpec
 from ppe.core.exact import solve_exact
@@ -18,6 +19,13 @@ app = FastAPI(
         "Supports exact enumeration, Monte Carlo estimation, weighted outcomes, "
         "and human-readable explanations."
     ),
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -57,7 +65,10 @@ def solve_exact_endpoint(
     trace: bool = Query(False, description="Include sample states in response"),
     max_trace: int = Query(50, ge=1, le=500),
 ):
-    res = solve_exact(puzzle, trace=trace, max_trace=max_trace)
+    try:
+        res = solve_exact(puzzle, trace=trace, max_trace=max_trace)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
     out: dict = {
         "probability": res.probability,
         "counts": res.counts,
@@ -87,7 +98,10 @@ def solve_mc_endpoint(
 
 @app.post("/solve/explain", summary="Solve and return a human-readable explanation")
 def solve_explain_endpoint(puzzle: PuzzleSpec):
-    res = solve_exact(puzzle)
+    try:
+        res = solve_exact(puzzle)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
     text = explain(puzzle, res)
     return {
         "probability": res.probability,
